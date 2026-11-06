@@ -110,8 +110,7 @@ The app runs both and overlays them, so the differences are visible on every des
 
 ## Not yet modelled
 
-- Tapered (telescoping) elements: MoM can model stepped radii directly instead of
-  using Lawson's ch. 7 equivalent-length correction.
-- Boom and mounting hardware (ch. 7).
-- Ground (ch. 5) and stacking (ch. 6): image method in MoM.
-- Conductor loss, and matching networks.
+Tapered (telescoping) elements, boom and mounting effects, ground, stacking,
+conductor loss and matching networks. See **Future work** in the
+[README](../README.md#future-work), which details how tapered elements will be
+added to the MoM solver.
