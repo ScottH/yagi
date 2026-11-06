@@ -31,7 +31,7 @@ export function drawLayout(svg: SVGSVGElement, d: Design): void {
     line.append(title);
     svg.append(line);
   });
-  const arrow = el('text', { x: Math.max(...xs) + pad * 0.5, y: -h * 0.42, class: 'fwd', 'font-size': h / 30, 'text-anchor': 'end' });
+  const arrow = el('text', { x: Math.max(...xs) + pad, y: -h * 0.4, class: 'fwd', 'font-size': h / 9, 'text-anchor': 'end' });
   arrow.textContent = 'forward →';
   svg.append(arrow);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { swr, wavelength } from '../src/model';
-import { starterDesign } from '../src/starter';
+import { TEMPLATES, fromTemplate } from '../src/templates';
 import { decodeDesign, encodeDesign } from '../src/hash';
 
 describe('model', () => {
@@ -14,10 +14,10 @@ describe('model', () => {
   });
 });
 
-describe('starter design', () => {
-  it('has one reflector, one driven element and N-2 directors in boom order', () => {
-    const d = starterDesign({ frequency: 144e6, count: 7, diameter: 0.006 });
-    expect(d.elements.map((e) => e.role)).toEqual(['reflector', 'driven', ...Array(5).fill('director')]);
+describe('template design', () => {
+  it('has reflector, driven element and directors in boom order', () => {
+    const d = fromTemplate(TEMPLATES.find((t) => t.id === 'lawson-6')!, 144e6, 0.006);
+    expect(d.elements.map((e) => e.role)).toEqual(['reflector', 'driven', ...Array(4).fill('director')]);
     const xs = d.elements.map((e) => e.x);
     expect([...xs].sort((a, b) => a - b)).toEqual(xs);
   });
@@ -25,7 +25,7 @@ describe('starter design', () => {
 
 describe('URL hash', () => {
   it('round-trips a design', () => {
-    const d = starterDesign({ frequency: 432.1e6, count: 5, diameter: 0.004 });
+    const d = fromTemplate(TEMPLATES.find((t) => t.id === 'lawson-5')!, 432.1e6, 0.004);
     const back = decodeDesign('#' + encodeDesign(d))!;
     expect(back.frequency).toBeCloseTo(d.frequency, 0);
     expect(back.elements).toHaveLength(5);

@@ -4,30 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Yagi Designer</title>
-  <meta name="description" content="Design and analyse Yagi-Uda antennas in the browser.">
+  <meta name="description" content="Design Yagi-Uda antennas from Lawson's Yagi Antenna Design and check them with a method-of-moments solver.">
 </head>
 <body>
   <aside id="panel">
     <header>
       <h1>📡 Yagi Designer</h1>
-      <p class="sub">Design a Yagi-Uda antenna for any frequency.</p>
+      <p class="sub">Lawson's <cite>Yagi Antenna Design</cite> (1986), checked by method of moments.</p>
     </header>
 
     <section>
-      <h2>1 · Parameters</h2>
+      <h2>1 · Start from</h2>
       <div class="row">
-        <label>Frequency <input type="number" id="freq" value="144.2" min="1" step="any"> MHz</label>
+        <select id="template" aria-label="Starting design"></select>
       </div>
       <div class="row">
-        <label>Elements <input type="number" id="count" value="6" min="2" max="40" step="1"></label>
-        <label>Ø <input type="number" id="dia" value="6" min="0.1" step="any"> mm</label>
+        <label>Frequency <input type="number" id="freq" value="144.2" min="0.1" step="any"> MHz</label>
+      </div>
+      <div class="row">
+        <label>Element Ø <input type="number" id="dia" value="6" min="0.1" step="any"> mm</label>
       </div>
       <button id="generate" class="primary">Generate design</button>
+      <p class="hint">Lengths are rescaled to your element diameter with Lawson's radius scaling (ch. 7).</p>
     </section>
 
     <section>
       <h2>2 · Elements</h2>
-      <p class="hint">Positions along the boom from the driven element, in mm. Edit to tweak.</p>
+      <p class="hint">Position along the boom from the driven element, and tip-to-tip length, in mm.</p>
       <table id="elements" class="elements">
         <thead><tr><th></th><th>Position</th><th>Length</th></tr></thead>
         <tbody></tbody>
@@ -36,12 +39,42 @@
 
     <section>
       <h2>3 · Performance</h2>
+      <table id="perf" class="perf">
+        <thead><tr><th></th><th><span class="key s-lawson"></span>Lawson</th><th><span class="key s-mom"></span>MoM</th></tr></thead>
+        <tbody></tbody>
+      </table>
       <dl id="summary" class="readout"></dl>
+      <div class="row">
+        <label>Sweep ± <input type="number" id="span" value="2" min="0.1" max="20" step="0.1"> %</label>
+      </div>
     </section>
+
+    <footer>
+      <strong>Lawson</strong>: the 1986 book's circuit model (half-wave mutual-impedance table, fitted self-reactance).
+      <strong>MoM</strong>: full-wave thin-wire method of moments. Free space, lossless, no boom or taper effects.
+    </footer>
   </aside>
 
   <main id="view">
     <svg id="layout" role="img" aria-label="Top view of the antenna"></svg>
+    <div class="legend">
+      <span><span class="key s-mom"></span>Method of moments</span>
+      <span><span class="key s-lawson"></span>Lawson (1986)</span>
+      <span id="busy" class="muted" hidden>computing…</span>
+    </div>
+    <div class="polars">
+      <figure><svg id="ePlane" role="img" aria-label="E-plane pattern"></svg><figcaption>E-plane (plane of the elements) · dBi</figcaption></figure>
+      <figure><svg id="hPlane" role="img" aria-label="H-plane pattern"></svg><figcaption>H-plane (through the boom, ⟂ elements) · dBi</figcaption></figure>
+    </div>
+    <div class="sweeps">
+      <svg id="gainSweep" role="img" aria-label="Gain versus frequency"></svg>
+      <svg id="fbSweep" role="img" aria-label="Front-to-back ratio versus frequency"></svg>
+      <svg id="swrSweep" role="img" aria-label="SWR versus frequency"></svg>
+    </div>
+    <details class="table-view">
+      <summary>Sweep data table</summary>
+      <table id="sweepTable"></table>
+    </details>
   </main>
 
   <script type="module" src="/src/main.ts"></script>
