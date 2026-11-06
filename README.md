@@ -2,7 +2,7 @@
 
 A static web app for designing Yagi-Uda antennas, built on James L. Lawson's *Yagi Antenna Design* (ARRL, 1986) and checked with a full-wave method-of-moments solver.
 
-Pick one of Lawson's reference designs, set the frequency and element diameter (lengths are rescaled with his ch. 7 radius scaling), edit the elements, and compare the two analyses side by side: forward gain, front-to-back ratio, feed impedance, SWR, E- and H-plane patterns, and frequency sweeps.
+Pick one of Lawson's reference designs, set the frequency and element diameter (lengths are rescaled with his ch. 7 radius scaling), edit the elements, and compare the two analyses side by side: forward gain, front-to-back ratio, feed impedance, SWR, E- and H-plane patterns, an interactive 3D gain pattern with the antenna at the centre, and frequency sweeps.
 
 Same shape as [`../moon`](../moon): a sidebar of controls beside a main view, no backend, with the design kept in the URL hash so links can be shared. Unlike moon it's written in TypeScript, so there's a small build step (Vite).
 
@@ -44,6 +44,7 @@ npm run compare    # run the book's reference designs through all engines
 | `src/templates.ts` | Starting designs + Lawson radius scaling (eqs. 7.1–7.6) |
 | `src/worker.ts` | Runs the analysis off the main thread |
 | `src/charts.ts`, `src/layout.ts` | SVG polar/sweep charts and antenna top view |
+| `src/pattern3d.ts` | three.js 3D gain pattern (lazy-loaded) |
 | `src/main.ts` | UI wiring; the design lives in the URL hash (`src/hash.ts`) |
 | `tests/` | Vitest: impedance tables, Hallén resonant lengths, the book's gains, NBS data |
 | `scripts/compare.ts` | Comparison tables for `docs/lawson-vs-mom.md` |

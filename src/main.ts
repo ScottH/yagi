@@ -6,6 +6,7 @@ import { drawLayout } from './layout';
 import { drawLine, drawPolar, type Series, type XY, type PolarPoint } from './charts';
 import type { EngineResult, Reply, Request } from './worker';
 import type { EngineId } from './analysis/engine';
+import type { Pattern3D } from './pattern3d';
 
 const $ = <T extends Element = HTMLElement>(id: string) => document.getElementById(id) as unknown as T;
 
@@ -61,6 +62,42 @@ worker.onmessage = (ev: MessageEvent<Reply>) => {
   }
   renderResults();
 };
+
+// ---------- 3D pattern (three.js loaded on first use) ----------
+
+let p3d: Pattern3D | null = null;
+let p3dLoading: Promise<void> | null = null;
+let p3dEngine: EngineId = 'mom';
+
+function render3d(): void {
+  // Show the chosen engine; fall back to Lawson while MoM is still computing.
+  const r = results.get(p3dEngine) ?? results.get('lawson');
+  if (!r) return;
+  if (!p3d) {
+    p3dLoading ??= import('./pattern3d').then(({ Pattern3D, RAMP_CSS }) => {
+      p3d = new Pattern3D($('p3d'));
+      p3d.opts.range = Number($<HTMLSelectElement>('p3dRange').value);
+      p3d.opts.seeThrough = $<HTMLInputElement>('p3dSee').checked;
+      $('cbBar').style.background = RAMP_CSS;
+      p3d.setAntenna(design);
+      render3d();
+    });
+    return;
+  }
+  p3d.setPattern(r.sphere);
+  $('cbHi').textContent = `${p3d.peakDbi.toFixed(1)} dBi`;
+  $('cbLo').textContent = `≤ ${(p3d.peakDbi - p3d.opts.range).toFixed(1)}`;
+}
+
+for (const b of document.querySelectorAll<HTMLButtonElement>('.seg button')) {
+  b.addEventListener('click', () => {
+    p3dEngine = b.dataset.engine as EngineId;
+    for (const o of document.querySelectorAll<HTMLButtonElement>('.seg button')) o.setAttribute('aria-pressed', String(o === b));
+    render3d();
+  });
+}
+$('p3dRange').addEventListener('change', () => { p3d?.setOptions({ range: Number($<HTMLSelectElement>('p3dRange').value) }); render3d(); });
+$('p3dSee').addEventListener('change', () => p3d?.setOptions({ seeThrough: $<HTMLInputElement>('p3dSee').checked }));
 
 // ---------- rendering ----------
 
@@ -137,6 +174,7 @@ function renderResults(): void {
   drawLine($<SVGSVGElement>('fbSweep'), line((p) => p.frontToBackDb), { title: 'Front-to-back', unit: 'dB', yMin: 0, markX });
   drawLine($<SVGSVGElement>('swrSweep'), line((p) => Math.min(p.swr50, 10)), { title: 'SWR (50 Ω)', unit: '', yMin: 1, yMax: 5, digits: 2, markX });
   renderSweepTable(have);
+  render3d();
 }
 
 function renderSweepTable(have: EngineResult[]): void {
@@ -161,6 +199,7 @@ function render(fromTable = false): void {
   if (!fromTable) renderTable();
   renderSummary();
   drawLayout($<SVGSVGElement>('layout'), design);
+  p3d?.setAntenna(design);
   history.replaceState(null, '', `#${encodeDesign(design)}`);
   requestAnalysis();
 }

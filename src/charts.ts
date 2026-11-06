@@ -22,7 +22,7 @@ tip.className = 'tooltip';
 tip.hidden = true;
 document.body.append(tip);
 
-function showTip(ev: PointerEvent, title: string, rows: { key: string; label: string; value: string }[]) {
+export function showTip(ev: { clientX: number; clientY: number }, title: string, rows: { key: string; label: string; value: string }[]) {
   tip.replaceChildren();
   const h = document.createElement('div');
   h.className = 'tip-title';
@@ -47,7 +47,7 @@ function showTip(ev: PointerEvent, title: string, rows: { key: string; label: st
   const y = Math.min(ev.clientY + pad, innerHeight - h2 - 4);
   tip.style.transform = `translate(${x}px, ${y}px)`;
 }
-const hideTip = () => { tip.hidden = true; };
+export const hideTip = () => { tip.hidden = true; };
 
 // ---- polar pattern ----
 

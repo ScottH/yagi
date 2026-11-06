@@ -88,3 +88,22 @@ describe('method of moments', () => {
     expect(Math.abs(g(24) - g(80))).toBeLessThan(0.15);
   });
 });
+
+describe('full-sphere grid', () => {
+  it('dipole: peak broadside, nulls along the element axis, seam closes', async () => {
+    const { sphereOf } = await import('../src/analysis/analyze');
+    const s = ENGINES.lawson.solve(dipole(0.5, 1e-4), C0);
+    const g = sphereOf(s, 3);
+    const at = (i: number, j: number) => g.gainDbi[i * (g.nPhi + 1) + j]!;
+    expect(at(0, 0)).toBeLessThan(-40);                 // θ = 0: off the end
+    expect(at(g.nTheta / 2, 0)).toBeCloseTo(2.15, 1);   // θ = 90°: broadside
+    expect(at(g.nTheta / 2, g.nPhi)).toBe(at(g.nTheta / 2, 0)); // seam closes
+  });
+  it('Yagi: sphere maximum is the forward gain', async () => {
+    const { sphereOf, performanceOf } = await import('../src/analysis/analyze');
+    const d = referenceToDesign(PREFERRED_DESIGNS[4]!);
+    const s = ENGINES.mom.solve(d, C0);
+    const g = sphereOf(s, 3);
+    expect(Math.max(...g.gainDbi)).toBeCloseTo(performanceOf(s, C0).gainDbi, 1);
+  });
+});

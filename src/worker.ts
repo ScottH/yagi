@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { analyze, ENGINES, patterns, sweep, type Performance, type PatternPoint } from './analysis/analyze';
+import { cutsOf, ENGINES, performanceOf, sphereOf, sweep, type Performance, type PatternPoint, type SphereGrid } from './analysis/analyze';
 import type { EngineId } from './analysis/engine';
 import type { Design } from './model';
 
@@ -12,6 +12,7 @@ export interface EngineResult {
   at: Performance;
   ePlane: PatternPoint[];
   hPlane: PatternPoint[];
+  sphere: SphereGrid;
   sweep: Performance[];
 }
 export type Reply = { id: number; result: EngineResult } | { id: number; error: string };
@@ -27,12 +28,15 @@ self.onmessage = (ev: MessageEvent<Request>) => {
     try {
       const e = ENGINES[engine];
       const f = design.frequency;
-      const { ePlane, hPlane } = patterns(design, e, f, 2);
+      // One solve at the design frequency feeds the summary, cuts and sphere.
+      const s = e.solve(design, f);
+      const { ePlane, hPlane } = cutsOf(s, 2);
       const result: EngineResult = {
         engine,
-        at: analyze(design, e, f),
+        at: performanceOf(s, f),
         ePlane,
         hPlane,
+        sphere: sphereOf(s, 3),
         sweep: sweep(design, e, f * (1 - span), f * (1 + span), steps),
       };
       (self as DedicatedWorkerGlobalScope).postMessage({ id, result } satisfies Reply);

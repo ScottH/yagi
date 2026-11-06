@@ -66,6 +66,24 @@
       <figure><svg id="ePlane" role="img" aria-label="E-plane pattern"></svg><figcaption>E-plane (plane of the elements) · dBi</figcaption></figure>
       <figure><svg id="hPlane" role="img" aria-label="H-plane pattern"></svg><figcaption>H-plane (through the boom, ⟂ elements) · dBi</figcaption></figure>
     </div>
+    <section class="p3d" aria-label="3D gain pattern">
+      <div class="p3d-head">
+        <h3>3D gain pattern</h3>
+        <div class="seg" role="radiogroup" aria-label="Engine for the 3D pattern">
+          <button type="button" data-engine="mom" aria-pressed="true">MoM</button>
+          <button type="button" data-engine="lawson" aria-pressed="false">Lawson</button>
+        </div>
+        <label>Range <select id="p3dRange">
+          <option value="20">20 dB</option>
+          <option value="30" selected>30 dB</option>
+          <option value="40">40 dB</option>
+        </select></label>
+        <label><input type="checkbox" id="p3dSee" checked> See-through</label>
+      </div>
+      <div id="p3d" class="p3d-canvas"></div>
+      <div class="colorbar"><span id="cbLo"></span><div class="bar" id="cbBar"></div><span id="cbHi"></span></div>
+      <p class="hint">Drag to rotate, scroll to zoom, hover for gain. Distance from the centre and colour both show gain; the antenna is drawn to scale at the centre (horizontal, forward = arrow).</p>
+    </section>
     <div class="sweeps">
       <svg id="gainSweep" role="img" aria-label="Gain versus frequency"></svg>
       <svg id="fbSweep" role="img" aria-label="Front-to-back ratio versus frequency"></svg>
