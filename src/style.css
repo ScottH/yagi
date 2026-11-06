@@ -106,6 +106,7 @@ svg .hairline { stroke: var(--muted); stroke-width: 1; vector-effect: non-scalin
 .opt-status:empty { display: none; }
 button.primary.running { background: #1b2747; border-color: var(--line); color: var(--text); }
 .row label input[type=checkbox] { width: auto; }
+#optBand { width: 100%; }
 
 footer { border-top: 1px solid var(--line); padding-top: .8rem; color: var(--muted); font-size: .8rem; }
 cite { font-style: italic; }

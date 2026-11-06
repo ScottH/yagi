@@ -7,6 +7,7 @@ import { drawLine, drawPolar, type Series, type XY, type PolarPoint } from './ch
 import type { EngineResult, Reply, Request } from './worker';
 import type { EngineId } from './analysis/engine';
 import type { Pattern3D } from './pattern3d';
+import { BAND_GROUPS, ALL_BANDS, matchBand } from './data/bands';
 import { GOALS, type Goal, type OptimizeSpec, type BandMetrics } from './optimize';
 import type { OptReply } from './optimizer.worker';
 
@@ -239,6 +240,24 @@ const opt = {
   status: $('optStatus'),
 };
 for (const [k, label] of Object.entries(GOALS)) opt.goal.append(new Option(label, k));
+
+const bandSelect = $<HTMLSelectElement>('optBand');
+for (const g of BAND_GROUPS) {
+  const og = document.createElement('optgroup');
+  og.label = g.label;
+  for (const b of g.bands) og.append(new Option(b.label, b.id));
+  bandSelect.append(og);
+}
+bandSelect.addEventListener('change', () => {
+  const b = ALL_BANDS.find((x) => x.id === bandSelect.value);
+  if (!b) return;
+  opt.lo.value = String(b.lo);
+  opt.hi.value = String(b.hi);
+});
+const syncBandSelect = () => { bandSelect.value = matchBand(Number(opt.lo.value), Number(opt.hi.value))?.id ?? ''; };
+opt.lo.addEventListener('input', syncBandSelect);
+opt.hi.addEventListener('input', syncBandSelect);
+syncBandSelect();
 let optWorker: Worker | null = null;
 let optLatest: Design | null = null;
 
