@@ -15,6 +15,11 @@ export interface Performance {
   gainDbi: number;
   /** Forward vs. directly backward (−x), dB (Lawson's definition, free space). */
   frontToBackDb: number;
+  /**
+   * Forward vs. the strongest rear lobe, dB: worst direction in the rear
+   * half of the E- and H-plane cuts (90°–270°, 5° steps).
+   */
+  frontToRearDb: number;
 }
 
 const FWD: Vec3 = [1, 0, 0];
@@ -24,7 +29,12 @@ const dB = (x: number) => 10 * Math.log10(Math.max(x, 1e-12));
 /** Gain, F/B, Z_in and SWR from an existing solution. */
 export function performanceOf(s: Solution, frequency: number): Performance {
   const f = s.directivity(FWD), b = s.directivity(BACK);
-  return { frequency, zIn: s.zIn, swr50: swr(s.zIn), gainDbi: dB(f), frontToBackDb: dB(f / b) };
+  let rear = b;
+  for (let deg = 90; deg <= 270; deg += 5) {
+    const t = (deg * Math.PI) / 180, c = Math.cos(t), sn = Math.sin(t);
+    rear = Math.max(rear, s.directivity([c, 0, sn]), s.directivity([c, sn, 0]));
+  }
+  return { frequency, zIn: s.zIn, swr50: swr(s.zIn), gainDbi: dB(f), frontToBackDb: dB(f / b), frontToRearDb: dB(f / rear) };
 }
 
 export function analyze(design: Design, engine: Engine, frequency = design.frequency): Performance {

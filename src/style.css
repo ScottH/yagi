@@ -101,6 +101,12 @@ svg .hairline { stroke: var(--muted); stroke-width: 1; vector-effect: non-scalin
 .table-view th, .table-view td { padding: .15rem .5rem; text-align: right; border-bottom: 1px solid var(--line); }
 .table-view th { color: var(--muted); font-weight: 600; }
 
+.opt-status { white-space: pre-line; font-variant-numeric: tabular-nums; color: var(--text); margin-top: .5rem; }
+.opt-status.warn { color: #e8dca6; }
+.opt-status:empty { display: none; }
+button.primary.running { background: #1b2747; border-color: var(--line); color: var(--text); }
+.row label input[type=checkbox] { width: auto; }
+
 footer { border-top: 1px solid var(--line); padding-top: .8rem; color: var(--muted); font-size: .8rem; }
 cite { font-style: italic; }
 

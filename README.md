@@ -4,6 +4,8 @@ A static web app for designing Yagi-Uda antennas, built on James L. Lawson's *Ya
 
 Pick one of Lawson's reference designs, set the frequency and element diameter (lengths are rescaled with his ch. 7 radius scaling), edit the elements, and compare the two analyses side by side: forward gain, front-to-back ratio, feed impedance, SWR, E- and H-plane patterns, an interactive 3D gain pattern with the antenna at the centre, and frequency sweeps.
 
+**Band optimizer:** give it a frequency range, an element count and a goal (maximum gain, front-to-back, front-to-rear, or a balance of gain and F/R), plus optional SWR and boom-length limits. It searches all element lengths and spacings for the best *worst-case* performance across the band: first with Lawson's model (thousands of evaluations in about 3 s), then with method of moments (about 25 s), so the result isn't tuned to the Lawson model's errors. Stop at any time to keep the best design so far.
+
 Same shape as [`../moon`](../moon): a sidebar of controls beside a main view, no backend, with the design kept in the URL hash so links can be shared. Unlike moon it's written in TypeScript, so there's a small build step (Vite).
 
 ## Analysis engines
@@ -42,6 +44,7 @@ npm run compare    # run the book's reference designs through all engines
 | `src/analysis/analyze.ts` | Engine-agnostic gain / F/B / patterns / sweeps |
 | `src/data/lawson.ts` | Tables transcribed from the book (1.3, 1.4, 1.5, 7.1) |
 | `src/templates.ts` | Starting designs + Lawson radius scaling (eqs. 7.1–7.6) |
+| `src/optimize.ts`, `src/optimizer.worker.ts` | Band optimizer: Nelder–Mead with restarts; Lawson stage, then MoM stage with space-mapped impedance correction |
 | `src/worker.ts` | Runs the analysis off the main thread |
 | `src/charts.ts`, `src/layout.ts` | SVG polar/sweep charts and antenna top view |
 | `src/pattern3d.ts` | three.js 3D gain pattern (lazy-loaded) |

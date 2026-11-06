@@ -28,14 +28,6 @@ export const boomLength = (d: Design): number => {
   return Math.max(...xs) - Math.min(...xs);
 };
 
-/** Results the analysis engine must provide (engine not yet chosen). */
-export interface Analysis {
-  gainDbi: number;
-  frontToBackDb: number;
-  /** Feed-point impedance (ohms). */
-  zIn: { re: number; im: number };
-}
-
 export function swr(z: { re: number; im: number }, z0 = 50): number {
   // |Γ| = |(Z − Z0)/(Z + Z0)|
   const nr = z.re - z0, ni = z.im, dr = z.re + z0, di = z.im;

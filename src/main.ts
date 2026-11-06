@@ -1,5 +1,5 @@
 import './style.css';
-import { type Design, type ElementRole, boomLength, wavelength } from './model';
+import { type Design, type ElementRole, boomLength, swr, wavelength } from './model';
 import { TEMPLATES, fromTemplate } from './templates';
 import { decodeDesign, encodeDesign } from './hash';
 import { drawLayout } from './layout';
@@ -7,6 +7,8 @@ import { drawLine, drawPolar, type Series, type XY, type PolarPoint } from './ch
 import type { EngineResult, Reply, Request } from './worker';
 import type { EngineId } from './analysis/engine';
 import type { Pattern3D } from './pattern3d';
+import { GOALS, type Goal, type OptimizeSpec, type BandMetrics } from './optimize';
+import type { OptReply } from './optimizer.worker';
 
 const $ = <T extends Element = HTMLElement>(id: string) => document.getElementById(id) as unknown as T;
 
@@ -15,7 +17,9 @@ const inputs = {
   freq: $<HTMLInputElement>('freq'),
   dia: $<HTMLInputElement>('dia'),
   span: $<HTMLInputElement>('span'),
+  z0: $<HTMLInputElement>('z0'),
 };
+const z0 = () => Math.max(Number(inputs.z0.value) || 50, 1);
 
 for (const t of TEMPLATES) inputs.template.append(new Option(t.label, t.id));
 inputs.template.value = 'lawson-6';
@@ -150,7 +154,8 @@ function renderResults(): void {
     ['Gain', (r) => `${r.at.gainDbi.toFixed(2)} dBi`],
     ['F/B', (r) => `${r.at.frontToBackDb.toFixed(1)} dB`],
     ['Z in', (r) => fmtZ(r.at.zIn)],
-    ['SWR 50 Ω', (r) => Number.isFinite(r.at.swr50) ? r.at.swr50.toFixed(2) : '∞'],
+    ['F/R', (r) => `${r.at.frontToRearDb.toFixed(1)} dB`],
+    [`SWR ${+z0().toFixed(1)} Ω`, (r) => { const v = swr(r.at.zIn, z0()); return Number.isFinite(v) ? v.toFixed(2) : '∞'; }],
   ];
   $('perf').querySelector('tbody')!.replaceChildren(...rows.map(([name, f]) => {
     const tr = document.createElement('tr');
@@ -172,7 +177,7 @@ function renderResults(): void {
   const markX = design.frequency / 1e6;
   drawLine($<SVGSVGElement>('gainSweep'), line((p) => p.gainDbi), { title: 'Forward gain', unit: 'dBi', digits: 2, markX });
   drawLine($<SVGSVGElement>('fbSweep'), line((p) => p.frontToBackDb), { title: 'Front-to-back', unit: 'dB', yMin: 0, markX });
-  drawLine($<SVGSVGElement>('swrSweep'), line((p) => Math.min(p.swr50, 10)), { title: 'SWR (50 Ω)', unit: '', yMin: 1, yMax: 5, digits: 2, markX });
+  drawLine($<SVGSVGElement>('swrSweep'), line((p) => Math.min(swr(p.zIn, z0()), 10)), { title: `SWR (${+z0().toFixed(1)} Ω)`, unit: '', yMin: 1, yMax: 5, digits: 2, markX });
   renderSweepTable(have);
   render3d();
 }
@@ -180,14 +185,14 @@ function renderResults(): void {
 function renderSweepTable(have: EngineResult[]): void {
   const t = $('sweepTable');
   const head = document.createElement('tr');
-  for (const h of ['MHz', ...have.flatMap((r) => [`${LABEL[r.engine]} gain dBi`, `${LABEL[r.engine]} F/B dB`, `${LABEL[r.engine]} Z in`])]) {
+  for (const h of ['MHz', ...have.flatMap((r) => [`${LABEL[r.engine]} gain dBi`, `${LABEL[r.engine]} F/B dB`, `${LABEL[r.engine]} F/R dB`, `${LABEL[r.engine]} Z in`])]) {
     const th = document.createElement('th'); th.textContent = h; head.append(th);
   }
   const rows = (have[0]?.sweep ?? []).map((p, i) => {
     const tr = document.createElement('tr');
     const vals = [(p.frequency / 1e6).toFixed(3), ...have.flatMap((r) => {
       const q = r.sweep[i]!;
-      return [q.gainDbi.toFixed(2), q.frontToBackDb.toFixed(1), fmtZ(q.zIn)];
+      return [q.gainDbi.toFixed(2), q.frontToBackDb.toFixed(1), q.frontToRearDb.toFixed(1), fmtZ(q.zIn)];
     })];
     for (const v of vals) { const td = document.createElement('td'); td.textContent = v; tr.append(td); }
     return tr;
@@ -213,6 +218,7 @@ function syncInputs(): void {
 
 $('generate').addEventListener('click', () => { design = generate(); render(); });
 inputs.span.addEventListener('change', requestAnalysis);
+inputs.z0.addEventListener('change', () => { if (results.size) renderResults(); });
 
 $('elements').addEventListener('change', (ev) => {
   const t = ev.target as HTMLInputElement;
@@ -222,6 +228,86 @@ $('elements').addEventListener('change', (ev) => {
   if (!e || !k || !Number.isFinite(v) || (k === 'length' && v <= 0)) return;
   e[k] = v / 1000;
   render(true);
+});
+
+// ---------- band optimiser ----------
+
+const opt = {
+  lo: $<HTMLInputElement>('optLo'), hi: $<HTMLInputElement>('optHi'), n: $<HTMLInputElement>('optN'),
+  goal: $<HTMLSelectElement>('optGoal'), swrOn: $<HTMLInputElement>('optSwrOn'), swr: $<HTMLInputElement>('optSwr'),
+  boom: $<HTMLInputElement>('optBoom'), mom: $<HTMLInputElement>('optMom'), run: $<HTMLButtonElement>('optRun'),
+  status: $('optStatus'),
+};
+for (const [k, label] of Object.entries(GOALS)) opt.goal.append(new Option(label, k));
+let optWorker: Worker | null = null;
+let optLatest: Design | null = null;
+
+const fmtBand = (m: BandMetrics) =>
+  `G ≥ ${m.minGainDbi.toFixed(2)} dBi · F/B ≥ ${m.minFbDb.toFixed(1)} · F/R ≥ ${m.minFrDb.toFixed(1)} dB · SWR ≤ ${Number.isFinite(m.maxSwr) ? m.maxSwr.toFixed(2) : '∞'} · boom ${(m.boom * 1000).toFixed(0)} mm`;
+
+function adopt(d: Design, fLo: number, fHi: number): void {
+  design = d;
+  const f0 = (fLo + fHi) / 2;
+  inputs.freq.value = String(+(f0 / 1e6).toFixed(4));
+  // sweep wide enough to show the band with some margin
+  inputs.span.value = String(Math.max(2, +((((fHi - fLo) / 2 / f0) * 150).toFixed(1))));
+  render();
+}
+
+function stopOptimizer(keep: boolean): void {
+  optWorker?.terminate();
+  optWorker = null;
+  opt.run.textContent = 'Optimize';
+  opt.run.classList.remove('running');
+  if (keep && optLatest) {
+    adopt(optLatest, Number(opt.lo.value) * 1e6, Number(opt.hi.value) * 1e6);
+    opt.status.textContent = 'Stopped: kept the best design found so far.';
+  }
+}
+
+opt.run.addEventListener('click', () => {
+  if (optWorker) { stopOptimizer(true); return; }
+  const fLo = Number(opt.lo.value) * 1e6, fHi = Number(opt.hi.value) * 1e6;
+  const n = Math.round(Number(opt.n.value));
+  if (!(fLo > 0) || !(fHi >= fLo) || !(n >= 2 && n <= 20)) {
+    opt.status.textContent = 'Check the band (low ≤ high) and element count (2–20).';
+    return;
+  }
+  const boomMm = Number(opt.boom.value);
+  const spec: OptimizeSpec = {
+    fLo, fHi, elements: n,
+    diameter: Number(inputs.dia.value) / 1000,
+    goal: opt.goal.value as Goal,
+    z0: z0(),
+    ...(opt.swrOn.checked ? { maxSwr: Number(opt.swr.value) } : {}),
+    ...(boomMm > 0 ? { maxBoom: boomMm / 1000 } : {}),
+    refine: opt.mom.checked ? 'mom' : 'lawson',
+  };
+  optLatest = null;
+  optWorker = new Worker(new URL('./optimizer.worker.ts', import.meta.url), { type: 'module' });
+  opt.run.textContent = 'Stop (keep best so far)';
+  opt.run.classList.add('running');
+  opt.status.textContent = 'Starting…';
+  const t0 = Date.now();
+  optWorker.onmessage = (ev: MessageEvent<OptReply>) => {
+    const m = ev.data;
+    if (m.kind === 'progress') {
+      optLatest = m.progress.design;
+      drawLayout($<SVGSVGElement>('layout'), m.progress.design); // live preview
+      const stage = { lawson: 'Lawson model', mom: 'Method of moments', final: 'Final check' }[m.progress.stage];
+      opt.status.textContent = `${stage} · ${((Date.now() - t0) / 1000).toFixed(0)} s · ${fmtBand(m.progress.best)}`;
+    } else if (m.kind === 'done') {
+      const r = m.result;
+      stopOptimizer(false);
+      adopt(r.design, fLo, fHi);
+      opt.status.textContent = `${r.feasible ? 'Done' : 'Done, but limits NOT met (try more elements, a looser SWR, or a longer boom)'} in ${((Date.now() - t0) / 1000).toFixed(0)} s.\nBefore: ${fmtBand(r.start)}\nAfter: ${fmtBand(r.metrics)}`;
+      opt.status.classList.toggle('warn', !r.feasible);
+    } else {
+      stopOptimizer(false);
+      opt.status.textContent = `Error: ${m.error}`;
+    }
+  };
+  optWorker.postMessage(spec);
 });
 
 syncInputs();

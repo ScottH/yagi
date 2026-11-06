@@ -29,7 +29,32 @@
     </section>
 
     <section>
-      <h2>2 · Elements</h2>
+      <h2>2 · Optimize for a band</h2>
+      <div class="row">
+        <label>Band <input type="number" id="optLo" value="144" min="0.1" step="any"> to
+          <input type="number" id="optHi" value="146" min="0.1" step="any"> MHz</label>
+      </div>
+      <div class="row">
+        <label>Elements <input type="number" id="optN" value="6" min="2" max="20" step="1"></label>
+        <label>Goal <select id="optGoal"></select></label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="optSwrOn" checked> SWR ≤ <input type="number" id="optSwr" value="2" min="1.05" max="10" step="0.05"></label>
+        <span class="muted">at Z0 (§4)</span>
+      </div>
+      <div class="row">
+        <label>Max boom <input type="number" id="optBoom" min="1" step="any" placeholder="none"> mm</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="optMom" checked> Refine with MoM (~30 s)</label>
+      </div>
+      <button id="optRun" class="primary">Optimize</button>
+      <p id="optStatus" class="hint opt-status" aria-live="polite"></p>
+      <p class="hint">Scores the <em>worst</em> value across the band. Uses the element Ø above. Search: Lawson's model first (instant), then method of moments. Pure F/B can leave strong rear-side lobes, so F/R or Balanced is usually the better goal.</p>
+    </section>
+
+    <section>
+      <h2>3 · Elements</h2>
       <p class="hint">Position along the boom from the driven element, and tip-to-tip length, in mm.</p>
       <table id="elements" class="elements">
         <thead><tr><th></th><th>Position</th><th>Length</th></tr></thead>
@@ -38,13 +63,14 @@
     </section>
 
     <section>
-      <h2>3 · Performance</h2>
+      <h2>4 · Performance</h2>
       <table id="perf" class="perf">
         <thead><tr><th></th><th><span class="key s-lawson"></span>Lawson</th><th><span class="key s-mom"></span>MoM</th></tr></thead>
         <tbody></tbody>
       </table>
       <dl id="summary" class="readout"></dl>
       <div class="row">
+        <label>Feed Z0 <input type="number" id="z0" value="50" min="1" step="any"> Ω</label>
         <label>Sweep ± <input type="number" id="span" value="2" min="0.1" max="20" step="0.1"> %</label>
       </div>
     </section>
